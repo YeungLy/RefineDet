@@ -229,7 +229,7 @@ def single_scale_test_net(net, imdb, targe_size=320, vis=False):
                     keep = soft_nms(cls_dets, sigma=0.5, Nt=0.30, threshold=cfg.confidence_threshold, method=1)
                     cls_dets = cls_dets[keep, :]
                 all_boxes[j][i] = cls_dets
-                if vis:
+                if vis and i in [12-1, 48-1, 52-1]:
                     vis_detections(im, imdb.classes[j], cls_dets)
 
         print 'im_detect: {:d}/{:d}'.format(i + 1, num_images)

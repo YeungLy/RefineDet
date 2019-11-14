@@ -5,6 +5,7 @@ set(Caffe_LINKER_LIBS "")
 find_package(Boost 1.46 REQUIRED COMPONENTS system thread filesystem regex)
 include_directories(SYSTEM ${Boost_INCLUDE_DIR})
 list(APPEND Caffe_LINKER_LIBS ${Boost_LIBRARIES})
+message("dir:${Boost_INCLUDE_DIR} ${Boost_LIBRARIES}")
 
 # ---[ Threads
 find_package(Threads REQUIRED)
@@ -81,7 +82,8 @@ endif()
 
 # ---[ BLAS
 if(NOT APPLE)
-  set(BLAS "Atlas" CACHE STRING "Selected BLAS library")
+  set(BLAS "Open" CACHE STRING "Selected BLAS library")
+  #set(BLAS "Atlas" CACHE STRING "Selected BLAS library")
   set_property(CACHE BLAS PROPERTY STRINGS "Atlas;Open;MKL")
 
   if(BLAS STREQUAL "Atlas" OR BLAS STREQUAL "atlas")

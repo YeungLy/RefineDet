@@ -17,7 +17,6 @@
 #include "caffe/util/bbox_util.hpp"
 
 using namespace boost::property_tree;  // NOLINT(build/namespaces)
-
 namespace caffe {
 
 /**

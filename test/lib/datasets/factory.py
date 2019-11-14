@@ -11,7 +11,12 @@ __sets = {}
 
 from datasets.pascal_voc import pascal_voc
 from datasets.coco import coco
+from datasets.kitti import kitti
 import numpy as np
+
+for split in ['train', 'val', 'trainval', 'test']:
+    name = 'kitti_{}'.format(split)
+    __sets[name] = (lambda split=split : kitti(split))
 
 # Set up voc_<year>_<split> using selective search "fast" mode
 for year in ['2007', '2012', '0712']:

@@ -8,15 +8,19 @@ import os
 if __name__ == '__main__':
     GPU_ID = 0
     single_scale = True # True: sinle scale test;  False: multi scale test
-    test_set = 'voc_2007_test' # 'voc_2007_test' or 'voc_2012_test' or 'coco_2014_minival' or 'coco_2015_test-dev'
+    #test_set = 'voc_2007_test' # 'voc_2007_test' or 'voc_2012_test' or 'coco_2014_minival' or 'coco_2015_test-dev'
+    test_set = 'kitti_test' # 'voc_2007_test' or 'voc_2012_test' or 'coco_2014_minival' or 'coco_2015_test-dev'
+    kitti_path = 'models/VGGNet/KITTI/refinedet_vgg16_320x320/'
     voc_path = 'models/VGGNet/VOC0712/refinedet_vgg16_320x320/'
     coco_path = 'models/VGGNet/coco/refinedet_vgg16_320x320/'
 
     cfg.single_scale_test = single_scale
     if 'voc' in test_set:
         path = voc_path
-    else:
+    elif 'coco' in test_set:
         path = coco_path
+    elif 'kitti' in test_set:
+        path = kitti_path 
 
     if '320' in path:
         input_size = 320
@@ -46,6 +50,8 @@ if __name__ == '__main__':
     mAP = {}
     for model in models:
         if model.find('caffemodel') == -1:
+            continue
+        if model.find('iter_120000') == -1:
             continue
         caffemodel = path + model
         print('Start evaluating: ' + caffemodel)

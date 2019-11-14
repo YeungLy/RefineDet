@@ -34,7 +34,8 @@ LIB_BUILD_DIR := $(BUILD_DIR)/lib
 STATIC_NAME := $(LIB_BUILD_DIR)/lib$(LIBRARY_NAME).a
 DYNAMIC_VERSION_MAJOR 		:= 1
 DYNAMIC_VERSION_MINOR 		:= 0
-DYNAMIC_VERSION_REVISION 	:= 0-rc3
+DYNAMIC_VERSION_REVISION 	:= 0
+#DYNAMIC_VERSION_REVISION 	:= 0-rc3
 DYNAMIC_NAME_SHORT := lib$(LIBRARY_NAME).so
 #DYNAMIC_SONAME_SHORT := $(DYNAMIC_NAME_SHORT).$(DYNAMIC_VERSION_MAJOR)
 DYNAMIC_VERSIONED_NAME_SHORT := $(DYNAMIC_NAME_SHORT).$(DYNAMIC_VERSION_MAJOR).$(DYNAMIC_VERSION_MINOR).$(DYNAMIC_VERSION_REVISION)
@@ -178,7 +179,7 @@ ifneq ($(CPU_ONLY), 1)
 	LIBRARIES := cudart cublas curand
 endif
 
-LIBRARIES += glog gflags protobuf boost_system boost_filesystem boost_regex m hdf5_hl hdf5
+LIBRARIES += glog gflags protobuf boost_system boost_filesystem m hdf5_hl hdf5
 
 # handle IO dependencies
 USE_LEVELDB ?= 1
@@ -199,7 +200,8 @@ ifeq ($(USE_OPENCV), 1)
 	endif
 
 endif
-PYTHON_LIBRARIES ?= boost_python python2.7
+PYTHON_LIBRARIES ?= boost_python27 python2.7
+#PYTHON_LIBRARIES ?= boost_python python2.7
 WARNINGS := -Wall -Wno-sign-compare
 
 ##############################
@@ -262,7 +264,7 @@ ifeq ($(LINUX), 1)
 	endif
 	# boost::thread is reasonably called boost_thread (compare OS X)
 	# We will also explicitly add stdc++ to the link target.
-	LIBRARIES += boost_thread stdc++
+	LIBRARIES += boost_thread stdc++ boost_regex
 	VERSIONFLAGS += -Wl,-soname,$(DYNAMIC_VERSIONED_NAME_SHORT) -Wl,-rpath,$(ORIGIN)/../lib
 endif
 
@@ -405,11 +407,11 @@ CXXFLAGS += -MMD -MP
 
 # Complete build flags.
 COMMON_FLAGS += $(foreach includedir,$(INCLUDE_DIRS),-I $(includedir))
-CXXFLAGS += -pthread -fPIC $(COMMON_FLAGS) $(WARNINGS)
-NVCCFLAGS += -ccbin=$(CXX) -Xcompiler -fPIC $(COMMON_FLAGS)
+CXXFLAGS += -pthread -fPIC $(COMMON_FLAGS) $(WARNINGS) -std=c++11
+NVCCFLAGS += -ccbin=$(CXX) -Xcompiler -fPIC $(COMMON_FLAGS) -std=c++11
 # mex may invoke an older gcc that is too liberal with -Wuninitalized
 MATLAB_CXXFLAGS := $(CXXFLAGS) -Wno-uninitialized
-LINKFLAGS += -pthread -fPIC $(COMMON_FLAGS) $(WARNINGS)
+LINKFLAGS += -pthread -fPIC $(COMMON_FLAGS) $(WARNINGS) -std=c++11
 
 USE_PKG_CONFIG ?= 0
 ifeq ($(USE_PKG_CONFIG), 1)
@@ -420,7 +422,6 @@ endif
 LDFLAGS += $(foreach librarydir,$(LIBRARY_DIRS),-L$(librarydir)) $(PKG_CONFIG) \
 		$(foreach library,$(LIBRARIES),-l$(library))
 PYTHON_LDFLAGS := $(LDFLAGS) $(foreach library,$(PYTHON_LIBRARIES),-l$(library))
-
 # 'superclean' target recursively* deletes all files ending with an extension
 # in $(SUPERCLEAN_EXTS) below.  This may be useful if you've built older
 # versions of Caffe that do not place all generated files in a location known

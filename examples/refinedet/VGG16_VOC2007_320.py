@@ -86,6 +86,7 @@ run_soon = True
 # Set true if you want to load from most recently saved snapshot.
 # Otherwise, we will load from the pretrain_model defined below.
 resume_training = True
+#resume_training = False
 # If true, Remove old model files.
 remove_old_models = False
 
@@ -269,6 +270,7 @@ job_file = "{}/{}.sh".format(job_dir, model_name)
 # Stores the test image names and sizes. Created by data/VOC0712/create_list.sh
 name_size_file = "data/VOC0712/test_name_size.txt"
 # The pretrained model. We use the Fully convolutional reduced (atrous) VGGNet.
+#pretrain_model = "models/VGGNet/VOC0712/refinedet_vgg16_320x320/VOC0712_refinedet_vgg16_320x320_final.caffemodel"
 pretrain_model = "models/VGGNet/VGG_ILSVRC_16_layers_fc_reduced.caffemodel"
 # Stores LabelMapItem.
 label_map_file = "data/VOC0712/labelmap_voc.prototxt"

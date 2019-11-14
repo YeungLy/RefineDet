@@ -11,7 +11,7 @@
 // For detection task, the file should be in the format as
 //   imgfolder1/img1.JPEG annofolder1/anno1.xml
 //   ....
-
+#include <iostream>
 #include <fstream>  // NOLINT(readability/streams)
 #include <map>
 #include <string>
@@ -88,6 +88,7 @@ int main(int argc, char** argv) {
     boost::filesystem::path img_file = root_folder / lines[line_id].first;
     GetImageSize(img_file.string(), &height, &width);
     std::string img_name = img_file.stem().string();
+    LOG(INFO) << "img_name:  " << img_name;
     if (map_name_id.size() == 0) {
       outfile << img_name << " " << height << " " << width << std::endl;
     } else {
