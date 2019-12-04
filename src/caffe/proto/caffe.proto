@@ -126,6 +126,7 @@ message NormalizedBBox {
   optional bool difficult = 6;
   optional float score = 7;
   optional float size = 8;
+  optional int32 view=9;
 }
 
 // Annotation for each object instance.
@@ -437,7 +438,8 @@ message ParamSpec {
 // NOTE
 // Update the next available ID when you add a new LayerParameter field.
 //
-// LayerParameter next available layer-specific ID: 147 (last added: recurrent_param)
+// old:LayerParameter next available layer-specific ID: 149 (last added: multilabel_multibox)
+// LayerParameter next available layer-specific ID: 150 (last added: multi_detection_output)
 message LayerParameter {
   optional string name = 1; // the layer name
   optional string type = 2; // the layer type
@@ -501,6 +503,7 @@ message LayerParameter {
   optional DataParameter data_param = 107;
   optional DetectionEvaluateParameter detection_evaluate_param = 205;
   optional DetectionOutputParameter detection_output_param = 204;
+  optional MultiDetectionOutputParameter multi_detection_output_param = 149;
   optional DropoutParameter dropout_param = 108;
   optional DummyDataParameter dummy_data_param = 109;
   optional EltwiseParameter eltwise_param = 110;
@@ -519,6 +522,7 @@ message LayerParameter {
   optional LRNParameter lrn_param = 118;
   optional MemoryDataParameter memory_data_param = 119;
   optional MultiBoxLossParameter multibox_loss_param = 201;
+  optional MultiLabelMultiBoxLossParameter multilabel_multibox_loss_param = 148;
   optional MVNParameter mvn_param = 120;
   optional NormalizeParameter norm_param = 206;
   optional ParameterParameter parameter_param = 145;
@@ -537,6 +541,7 @@ message LayerParameter {
   optional SoftmaxParameter softmax_param = 125;
   optional SPPParameter spp_param = 132;
   optional SliceParameter slice_param = 126;
+  optional SliceMultiParameter slice_multi_param = 147;
   optional TanHParameter tanh_param = 127;
   optional ThresholdParameter threshold_param = 128;
   optional TileParameter tile_param = 138;
@@ -1005,6 +1010,10 @@ message SaveOutputParameter {
 }
 
 // Message that store parameters used by DetectionOutputLayer
+message MultiDetectionOutputParameter {
+  optional DetectionOutputParameter detection_output_param = 1;
+  optional uint32 num_views = 2;
+}
 message DetectionOutputParameter {
   // Number of classes to be predicted. Required!
   optional uint32 num_classes = 1;
@@ -1318,6 +1327,12 @@ message MultiBoxLossParameter {
   //the objectness score is used for the anchor refinement module to filter easy negative anchor.
   optional float objectness_score = 24 [default = 0.01];
 }
+// Message that store parameters used by MultiBoxLossLayer
+
+message MultiLabelMultiBoxLossParameter {
+  optional MultiBoxLossParameter multibox_loss_param = 1;
+  optional MultiBoxLossParameter multibox_view_loss_param = 2;
+}
 
 message MVNParameter {
   // This parameter can be set to false to normalize mean only
@@ -1618,6 +1633,11 @@ message SigmoidParameter {
   optional Engine engine = 1 [default = DEFAULT];
 }
 
+message SliceMultiParameter {
+  optional string clabel_map_file = 1;
+  optional string vlabel_map_file = 2;
+  //SliceMultiLayer
+}
 message SliceParameter {
   // The axis along which to slice -- may be negative to index from the end
   // (e.g., -1 for the last axis).

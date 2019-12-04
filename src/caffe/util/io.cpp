@@ -208,12 +208,17 @@ bool ReadRichImageToAnnotatedDatum(const string& filename,
   if (!boost::filesystem::exists(labelfile)) {
     return true;
   }
+  bool use_multi_label = false;
   switch (type) {
     case AnnotatedDatum_AnnotationType_BBOX:
       int ori_height, ori_width;
       GetImageSize(filename, &ori_height, &ori_width);
       if (labeltype == "xml") {
-        return ReadXMLToAnnotatedDatum(labelfile, ori_height, ori_width,
+        if (use_multi_label)
+          return ReadXMLToAnnotatedDatum_MultiLabel(labelfile, ori_height, ori_width,
+                                       name_to_label, anno_datum);
+        else 
+          return ReadXMLToAnnotatedDatum(labelfile, ori_height, ori_width,
                                        name_to_label, anno_datum);
       } else if (labeltype == "json") {
         return ReadJSONToAnnotatedDatum(labelfile, ori_height, ori_width,
@@ -255,6 +260,155 @@ bool ReadFileToDatum(const string& filename, const int label,
 }
 
 // Parse VOC/ILSVRC detection annotation.
+bool ReadXMLToAnnotatedDatum_MultiLabel(const string& labelfile, const int img_height,
+    const int img_width, const std::map<string, int>& name_to_label,
+    AnnotatedDatum* anno_datum) {
+  ptree pt;
+  read_xml(labelfile, pt);
+
+  // Parse annotation.
+  int width = 0, height = 0;
+  try {
+    height = pt.get<int>("annotation.size.height");
+    width = pt.get<int>("annotation.size.width");
+  } catch (const ptree_error &e) {
+    LOG(WARNING) << "When parsing " << labelfile << ": " << e.what();
+    height = img_height;
+    width = img_width;
+  }
+  LOG_IF(WARNING, height != img_height) << labelfile <<
+      " inconsistent image height.";
+  LOG_IF(WARNING, width != img_width) << labelfile <<
+      " inconsistent image width.";
+  CHECK(width != 0 && height != 0) << labelfile <<
+      " no valid image width/height.";
+  int instance_id = 0;
+  BOOST_FOREACH(ptree::value_type &v1, pt.get_child("annotation")) {
+    ptree pt1 = v1.second;
+    if (v1.first == "object") {
+      Annotation* anno_at_cls = NULL;
+      Annotation* anno_at_view = NULL;
+      bool difficult = false;
+      ptree object = v1.second;
+      BOOST_FOREACH(ptree::value_type &v2, object.get_child("")) {
+        ptree pt2 = v2.second;
+        if (v2.first == "name") {
+          string name = pt2.data();
+          if (name_to_label.find(name) == name_to_label.end()) {
+            LOG(FATAL) << "Unknown name: " << name;
+          }
+          int label = name_to_label.find(name)->second;
+          int vlabel, clabel;
+          if (label > 0) 
+          {
+              vlabel = (label - 1) % 8 + 1 + 8;  //0-7 -> 9-16
+              clabel = (label - 1) / 8 + 1;  //0-6 -> 1-7
+          }
+          else
+          {// background
+
+              clabel = 0;
+              vlabel = 8;
+          }
+          /*class group*/
+          bool found_group_cls = false;
+          bool found_group_view = false;
+          
+          /* group label = background + 7 cls + background + 8 view*/
+          for (int g = 0; g < anno_datum->annotation_group_size(); ++g) {
+            AnnotationGroup* anno_group =
+                anno_datum->mutable_annotation_group(g);
+            if (clabel == anno_group->group_label()) {
+              if (anno_group->annotation_size() == 0) {
+                instance_id = 0;
+              } else {
+                instance_id = anno_group->annotation(
+                    anno_group->annotation_size() - 1).instance_id() + 1;
+              }
+              anno_at_cls = anno_group->add_annotation();
+              anno_at_cls->set_instance_id(instance_id++);
+              found_group_cls = true;
+            }
+            if (vlabel == anno_group->group_label()) {
+              if (anno_group->annotation_size() == 0) {
+                instance_id = 0;
+              } else {
+                instance_id = anno_group->annotation(
+                    anno_group->annotation_size() - 1).instance_id() + 1;
+              }
+              anno_at_view = anno_group->add_annotation();
+              anno_at_view->set_instance_id(instance_id++);
+              found_group_view = true;
+            }
+          }
+          //cls group
+          if (!found_group_cls) {
+            // If there is no such annotation_group, create a new one.
+            AnnotationGroup* anno_group = anno_datum->add_annotation_group();
+            anno_group->set_group_label(clabel);
+            anno_at_cls = anno_group->add_annotation();
+            instance_id = 0;
+            anno_at_cls->set_instance_id(instance_id++);
+          }
+          //view group
+          if (!found_group_view) {
+            // If there is no such annotation_group, create a new one.
+            AnnotationGroup* anno_group = anno_datum->add_annotation_group();
+            anno_group->set_group_label(vlabel);
+            anno_at_view = anno_group->add_annotation();
+            instance_id = 0;
+            anno_at_view->set_instance_id(instance_id++);
+          }
+
+        } else if (v2.first == "difficult") {
+          difficult = pt2.data() == "1";
+        } else if (v2.first == "bndbox") {
+          float xmin = pt2.get<float>("xmin", 0);
+          float ymin = pt2.get<float>("ymin", 0);
+          float xmax = pt2.get<float>("xmax", 0);
+          float ymax = pt2.get<float>("ymax", 0);
+          CHECK_NOTNULL(anno_at_cls);
+          CHECK_NOTNULL(anno_at_view);
+          LOG_IF(WARNING, xmin > width) << labelfile <<
+              " bounding box exceeds image boundary.";
+          LOG_IF(WARNING, ymin > height) << labelfile <<
+              " bounding box exceeds image boundary.";
+          LOG_IF(WARNING, xmax > width) << labelfile <<
+              " bounding box exceeds image boundary.";
+          LOG_IF(WARNING, ymax > height) << labelfile <<
+              " bounding box exceeds image boundary.";
+          LOG_IF(WARNING, xmin < 0) << labelfile <<
+              " bounding box exceeds image boundary.";
+          LOG_IF(WARNING, ymin < 0) << labelfile <<
+              " bounding box exceeds image boundary.";
+          LOG_IF(WARNING, xmax < 0) << labelfile <<
+              " bounding box exceeds image boundary.";
+          LOG_IF(WARNING, ymax < 0) << labelfile <<
+              " bounding box exceeds image boundary.";
+          LOG_IF(WARNING, xmin > xmax) << labelfile <<
+              " bounding box irregular.";
+          LOG_IF(WARNING, ymin > ymax) << labelfile <<
+              " bounding box irregular.";
+          // Store the normalized bounding box.
+          NormalizedBBox* cbbox = anno_at_cls->mutable_bbox();
+          NormalizedBBox* vbbox = anno_at_view->mutable_bbox();
+          cbbox->set_xmin(static_cast<float>(xmin) / width);
+          cbbox->set_ymin(static_cast<float>(ymin) / height);
+          cbbox->set_xmax(static_cast<float>(xmax) / width);
+          cbbox->set_ymax(static_cast<float>(ymax) / height);
+          cbbox->set_difficult(difficult);
+
+          vbbox->set_xmin(static_cast<float>(xmin) / width);
+          vbbox->set_ymin(static_cast<float>(ymin) / height);
+          vbbox->set_xmax(static_cast<float>(xmax) / width);
+          vbbox->set_ymax(static_cast<float>(ymax) / height);
+          vbbox->set_difficult(difficult);
+        }
+      }
+    }
+  }
+  return true;
+}
 bool ReadXMLToAnnotatedDatum(const string& labelfile, const int img_height,
     const int img_width, const std::map<string, int>& name_to_label,
     AnnotatedDatum* anno_datum) {
